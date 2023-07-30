@@ -1,0 +1,2 @@
+go run main.go --chance 0.2 --count 100 --path ./data --size 10,200
+for i in $(seq 0 99); do echo $(cat data_$i); done
