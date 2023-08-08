@@ -36,8 +36,8 @@ func CreateStartCommand() *cobra.Command {
     return countCommand
 }
 
-func CreateLocalCommand() (*cobra.Command, *local.LocalOptions) {
-    opts := &local.LocalOptions{}
+func CreateLocalCommand() (*cobra.Command, *local.LocalOpts) {
+    opts := &local.LocalOpts{}
     localCommand := &cobra.Command {
         Use:    `local`,
         Short:  `start counting local strings`,
