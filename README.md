@@ -16,8 +16,10 @@ We will test for different data volumes
 
 ## The Base Model and Easy Benchmarking
 
-So this app should be resumed to interfaces as the main abstraction.
-Essentially, we will need 2 interfaces, a `sender` and a `reciver`.
+Base model of string counting:
+
+- `Sender`   : GetHashStream(options)        => hashes  : chan FileHash{md5, filename}
+- `Receiver` : CountStrings(hashes, options) => results : pqueue
 
 ### Receiver
 
@@ -35,17 +37,19 @@ For this we need a basic hashmap.
 
 For local usage:
 ```console
-top-string start local [PATH] [OPTIONS]
+top-string local [PATH] [OPTIONS]
 ```
 
 For remote server usage:
 ```console
-top-string start server [OPTIONS]
+top-string server [OPTIONS]
 ```
 
 For remote sender usage:
 ```console
-top-string start send [IP:PORT] [PATH] [OPTIONS]
+top-string send [IP:PORT] [PATH] [OPTIONS]
 ```
 
+## Remote
 
+For the remote option we will have multiple ways of doing this, we can 

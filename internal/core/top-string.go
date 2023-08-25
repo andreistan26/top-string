@@ -14,9 +14,6 @@ import (
 
 type SenderOpts struct {
     Paths       []string
-}
-
-type ReceiverOpts struct {
     QueryCount  int
 }
 
@@ -75,7 +72,7 @@ func HashFiles(filenames <-chan string, out chan<- FileHash){
 }
 
 
-func GetHashStream(opts *SenderOpts) (chan FileHash) {
+func GetHashStream(opts SenderOpts) (chan FileHash) {
     c := make(chan string, CH_BUFSZ)
     out := make(chan FileHash, CH_BUFSZ)
     
@@ -117,12 +114,13 @@ type MapValue struct {
     Frequency   int
 }
 
-func CountStrings(hashes <-chan FileHash, opts *ReceiverOpts) []pqueue.FileHash {
+func CountStrings(hashes <-chan FileHash, queryCount int) []pqueue.FileHash {
     hashMap := make(map[[16]byte] MapValue)
     fmt.Println("in count strings")
-    var pq pqueue.PQueue
+    pq := pqueue.PQueue{}
 
     for fileHash := range hashes {
+        fmt.Println(fileHash.Filename)
         if value, exists := hashMap[fileHash.Hash]; exists == false {
             hashMap[fileHash.Hash] = MapValue{
                 Filename: fileHash.Filename,
@@ -134,19 +132,19 @@ func CountStrings(hashes <-chan FileHash, opts *ReceiverOpts) []pqueue.FileHash 
         }
     }
 
-    if len(hashMap) < opts.QueryCount {
-        opts.QueryCount = len(hashMap)
+    if len(hashMap) < queryCount {
+        queryCount = len(hashMap)
     }
 
     for _, value := range hashMap {
-        if len(pq) < opts.QueryCount {
+        if len(pq) < queryCount {
             pq = append(pq, &pqueue.FileHash {
                 Priority: -value.Frequency,
                 Value: value.Filename,
                 Index: len(pq),
             })
 
-            if len(pq) == opts.QueryCount {
+            if len(pq) == queryCount {
                 heap.Init(&pq)
             }
 

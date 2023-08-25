@@ -3,8 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
+    "net"
 
-	"github.com/andreistan26/top-string/internal/local"
+	"github.com/andreistan26/top-string/internal/core"
+	"github.com/andreistan26/top-string/internal/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -36,12 +38,12 @@ func CreateStartCommand() *cobra.Command {
     return countCommand
 }
 
-func CreateLocalCommand() (*cobra.Command, *local.LocalOpts) {
-    opts := &local.LocalOpts{}
+func CreateLocalCommand() (*cobra.Command) {
+    opts := core.SenderOpts{}
     localCommand := &cobra.Command {
         Use:    `local`,
         Short:  `start counting local strings`,
-        Args:   argsValidatorLocal,
+        Args:   fileArgsValidator,
         RunE:   func(cmd *cobra.Command, args []string) error {
             ExecuteLocal(cmd, args, opts)
             return nil
@@ -50,38 +52,50 @@ func CreateLocalCommand() (*cobra.Command, *local.LocalOpts) {
 
     localCommand.Flags().IntVar(&opts.QueryCount, "top", 5, "Number of strings returned")
 
-    return localCommand, opts
+    return localCommand
 }
 
 func CreateServerCommand() *cobra.Command {
+    addressOpts := remote.ConnOpts{}
     serverCommand := &cobra.Command {
         Use:    `server`,
         Short:  `start a server for counting strings`,
         RunE:   func(cmd *cobra.Command, args []string) error {
-            //TODO Add server starter
+            ExecuteServer(cmd, addressOpts)
             return nil
         },
     }
+
+    serverCommand.Flags().IPVar(&addressOpts.Ip, "ip", net.IP("127.0.0.1"), "Server ip")
+    serverCommand.Flags().IntVar(&addressOpts.Port, "port", 1069, "Server ip")
 
     return serverCommand
 }
 
 func CreateSenderCommand() *cobra.Command {
+    senderOpts := core.SenderOpts{}
+    addressOpts := remote.ConnOpts{}
+
     senderCommand := &cobra.Command {
         Use:    `sender`,
         Short:  `start sending `,
-        Args:   nil, // TODO Add sender args validator
+        Args:   fileArgsValidator, // TODO Add sender args validator
         RunE:   func(cmd *cobra.Command, args []string) error {
-            //TODO Add sender starter
+            ExecuteSender(cmd, args, senderOpts, addressOpts)
             return nil
         },
     }
 
+    senderCommand.Flags().IntVar(&senderOpts.QueryCount, "top", 5, "Number of strings returned")
+    senderCommand.Flags().IPVar(&addressOpts.Ip, "ip", net.IP("127.0.0.1"), "Server ip")
+    senderCommand.Flags().IntVar(&addressOpts.Port, "port", 1069, "Server ip")
+    
+
     return senderCommand
 }
 
-func argsValidatorLocal(cmd *cobra.Command, args []string) error {
-    fmt.Print(args)
+func fileArgsValidator(cmd *cobra.Command, args []string) error {
+    fmt.Println(args)
     if err := cobra.MinimumNArgs(1)(cmd, args); err != nil {
         return err
     }
@@ -91,8 +105,6 @@ func argsValidatorLocal(cmd *cobra.Command, args []string) error {
             return err
         }
     }
-
-
 
     return nil
 }
