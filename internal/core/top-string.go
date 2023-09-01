@@ -114,56 +114,59 @@ type MapValue struct {
     Frequency   int
 }
 
-func CountStrings(hashes <-chan FileHash, queryCount int) []pqueue.FileHash {
+func CountStrings(hashes <-chan FileHash, queryCount int) chan pqueue.FileHash {
     hashMap := make(map[[16]byte] MapValue)
     fmt.Println("in count strings")
     pq := pqueue.PQueue{}
-
-    for fileHash := range hashes {
-        fmt.Println(fileHash.Filename)
-        if value, exists := hashMap[fileHash.Hash]; exists == false {
-            hashMap[fileHash.Hash] = MapValue{
-                Filename: fileHash.Filename,
-                Frequency: 1,
+    results := make(chan pqueue.FileHash, CH_BUFSZ)
+    go func() {
+        for fileHash := range hashes {
+            fmt.Println("file", fileHash.Filename, fileHash.Hash)
+            if value, exists := hashMap[fileHash.Hash]; exists == false {
+                hashMap[fileHash.Hash] = MapValue{
+                    Filename: fileHash.Filename,
+                    Frequency: 1,
+                }
+            } else {
+                value.Frequency += 1
+                hashMap[fileHash.Hash] = value
             }
-        } else {
-            value.Frequency += 1
-            hashMap[fileHash.Hash] = value
         }
-    }
 
-    if len(hashMap) < queryCount {
-        queryCount = len(hashMap)
-    }
+        if len(hashMap) < queryCount {
+            queryCount = len(hashMap)
+        }
 
-    for _, value := range hashMap {
-        if len(pq) < queryCount {
-            pq = append(pq, &pqueue.FileHash {
-                Priority: -value.Frequency,
-                Value: value.Filename,
-                Index: len(pq),
-            })
+        for _, value := range hashMap {
+            if len(pq) < queryCount {
+                pq = append(pq, &pqueue.FileHash {
+                    Priority: -value.Frequency,
+                    Value: value.Filename,
+                    Index: len(pq),
+                })
 
-            if len(pq) == queryCount {
-                heap.Init(&pq)
+                if len(pq) == queryCount {
+                    heap.Init(&pq)
+                }
+
+                continue
+            } else if -value.Frequency < pq[0].Priority {
+                heap.Pop(&pq)
+                heap.Push(&pq, &pqueue.FileHash {
+                    Priority: -value.Frequency,
+                    Value: value.Filename,
+                })
             }
-
-            continue
-        } else if -value.Frequency < pq[0].Priority {
-            heap.Pop(&pq)
-            heap.Push(&pq, &pqueue.FileHash {
-                Priority: -value.Frequency,
-                Value: value.Filename,
-            })
         }
-    }
-    
-    resCount := len(pq)
-    results := make([]pqueue.FileHash, resCount)
-    for pq.Len() > 0 {
-        item := heap.Pop(&pq).(*pqueue.FileHash)
-        results[pq.Len()] = *item
-    }
+        
+        for pq.Len() > 0 {
+            item := heap.Pop(&pq).(*pqueue.FileHash)
+            results <- *item
+        }
+
+        close(results)
+    } ()
+
 
     return results
 }
